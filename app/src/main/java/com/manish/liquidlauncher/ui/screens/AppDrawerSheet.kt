@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
@@ -19,8 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.manish.liquidlauncher.ui.components.LiquidAppIconItem
 import com.manish.liquidlauncher.ui.components.LiquidGlassSurface
@@ -51,13 +52,19 @@ fun AppDrawerSheet(viewModel: LauncherViewModel) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF040914).copy(alpha = 0.92f))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF040914).copy(alpha = 0.98f),
+                            Color(0xFF071324).copy(alpha = 0.98f)
+                        )
+                    )
+                )
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(16.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // 05. Natural Fluid Grid Search Header
                 LiquidGlassSurface(
                     config = config,
                     cornerRadius = 28.dp,
@@ -66,7 +73,7 @@ fun AppDrawerSheet(viewModel: LauncherViewModel) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 4.dp),
+                            .padding(horizontal = 14.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -80,6 +87,7 @@ fun AppDrawerSheet(viewModel: LauncherViewModel) {
                             placeholder = {
                                 Text(
                                     "Search ${viewModel.installedApps.size} apps...",
+                                    fontFamily = FontFamily.SansSerif,
                                     color = Color.White.copy(alpha = 0.55f)
                                 )
                             },
@@ -113,11 +121,10 @@ fun AppDrawerSheet(viewModel: LauncherViewModel) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 05. Natural Fluid Grid App List
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(filteredApps, key = { it.packageName }) { app ->

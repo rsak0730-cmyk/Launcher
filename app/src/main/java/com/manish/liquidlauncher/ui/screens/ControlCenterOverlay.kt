@@ -1,7 +1,6 @@
 package com.manish.liquidlauncher.ui.screens
 
 import android.app.Activity
-import android.os.Build
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -41,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -137,8 +137,8 @@ fun ControlCenterOverlay(viewModel: LauncherViewModel) {
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF030710).copy(alpha = 0.94f),
-                            Color(0xFF071324).copy(alpha = 0.90f)
+                            Color(0xFF030711).copy(alpha = 0.98f),
+                            Color(0xFF071426).copy(alpha = 0.98f)
                         )
                     )
                 )
@@ -157,7 +157,7 @@ fun ControlCenterOverlay(viewModel: LauncherViewModel) {
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 1. One UI Top Carrier & Utility Header
+                // 1. Top Carrier & Utility Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -168,6 +168,7 @@ fun ControlCenterOverlay(viewModel: LauncherViewModel) {
                     Text(
                         text = carrier,
                         color = Color.White,
+                        fontFamily = FontFamily.SansSerif,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -179,6 +180,7 @@ fun ControlCenterOverlay(viewModel: LauncherViewModel) {
                         Text(
                             text = "VoLTE 4G",
                             color = accent,
+                            fontFamily = FontFamily.SansSerif,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -192,6 +194,7 @@ fun ControlCenterOverlay(viewModel: LauncherViewModel) {
                             Text(
                                 text = "⚡ $battery%",
                                 color = Color.White,
+                                fontFamily = FontFamily.SansSerif,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -199,7 +202,7 @@ fun ControlCenterOverlay(viewModel: LauncherViewModel) {
                     }
                 }
 
-                // Edit / Theme Engine / System Settings Row
+                // Edit / Close / System Settings Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -212,19 +215,34 @@ fun ControlCenterOverlay(viewModel: LauncherViewModel) {
                         },
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(Icons.Rounded.Edit, contentDescription = "Customize", tint = Color.White, modifier = Modifier.size(20.dp))
+                        Icon(
+                            Icons.Rounded.Edit,
+                            contentDescription = "Customize",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                     IconButton(
                         onClick = { viewModel.isControlCenterOpen = false },
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(Icons.Rounded.PowerSettingsNew, contentDescription = "Close Panel", tint = Color.White, modifier = Modifier.size(20.dp))
+                        Icon(
+                            Icons.Rounded.PowerSettingsNew,
+                            contentDescription = "Close Panel",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                     IconButton(
                         onClick = { viewModel.openSystemPanel(context, Settings.ACTION_SETTINGS) },
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(Icons.Rounded.Settings, contentDescription = "System Settings", tint = Color.White, modifier = Modifier.size(20.dp))
+                        Icon(
+                            Icons.Rounded.Settings,
+                            contentDescription = "System Settings",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
@@ -428,6 +446,7 @@ private fun ConnectivityPill(
             Text(
                 text = title,
                 color = Color.White,
+                fontFamily = FontFamily.SansSerif,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -495,6 +514,7 @@ private fun LiquidQuickTileItem(
         Text(
             text = tile.title,
             color = Color.White.copy(alpha = 0.92f),
+            fontFamily = FontFamily.SansSerif,
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
@@ -507,6 +527,7 @@ private fun LiquidQuickTileItem(
             Text(
                 text = tile.subtitle,
                 color = accent.copy(alpha = 0.85f),
+                fontFamily = FontFamily.SansSerif,
                 fontSize = 9.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
