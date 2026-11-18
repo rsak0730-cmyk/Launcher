@@ -1,13 +1,13 @@
 package com.manish.liquidlauncher.ui.screens
 
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -45,15 +47,18 @@ import com.manish.liquidlauncher.ui.components.LiquidGlassSurface
 import com.manish.liquidlauncher.ui.components.accentColor
 import com.manish.liquidlauncher.viewmodel.LauncherViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     viewModel: LauncherViewModel,
     onPickWallpaper: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val config = viewModel.themeConfig
     val accent = config.accentColor()
 
@@ -63,7 +68,10 @@ fun HomeScreen(
     var openedFolderApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     val batteryLevel = remember { viewModel.getBatteryLevel(context) }
 
-    // Auto-grouped Liquid Folders
+    val pages = viewModel.homePages
+    val pagerState = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
+
+    // One UI style categorized Liquid Folders
     val socialApps = remember(viewModel.installedApps) {
         viewModel.installedApps.filter {
             it.packageName.contains("whatsapp") ||
@@ -97,14 +105,14 @@ fun HomeScreen(
             .background(Color(0xFF040811))
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _, dragAmount ->
-                    when {
-                        dragAmount < -28f -> viewModel.isDrawerOpen = true
-                        dragAmount > 28f -> viewModel.isControlCenterOpen = true
+                    // Swipe up anywhere to open App Drawer (One UI style)
+                    if (dragAmount < -30f) {
+                        viewModel.isDrawerOpen = true
                     }
                 }
             }
     ) {
-        // Wallpaper Layer
+        // Wallpaper Layer (Custom Gallery Image OR Procedural Liquid Ocean)
         if (viewModel.customWallpaperUri != null) {
             AsyncImage(
                 model = viewModel.customWallpaperUri,
@@ -115,7 +123,7 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.25f))
+                    .background(Color.Black.copy(alpha = 0.24f))
             )
         } else {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -157,258 +165,296 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Controls + Search Bar + 1-Tap Launcher Switcher
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Top Utility Row: Search + One UI Switcher + Wallpaper + Theme Engine
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                LiquidGlassSurface(
+                    config = config,
+                    cornerRadius = 50.dp,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clickable { viewModel.isDrawerOpen = true }
                 ) {
-                    LiquidGlassSurface(
-                        config = config,
-                        cornerRadius = 50.dp,
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(46.dp)
-                            .clickable { viewModel.isDrawerOpen = true }
+                            .fillMaxSize()
+                            .padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Search,
-                                contentDescription = "Search",
-                                tint = accent,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Search apps...",
-                                color = Color.White.copy(alpha = 0.75f),
-                                fontFamily = FontFamily.SansSerif,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    // 1-Tap Switch Between One UI Home & Liquid Launcher
-                    LiquidGlassSurface(
-                        config = config,
-                        cornerRadius = 50.dp,
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        IconButton(onClick = {
-                            try {
-                                val intent = Intent(Settings.ACTION_HOME_SETTINGS).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                viewModel.openSystemPanel(context, Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
-                            }
-                        }) {
-                            Icon(
-                                imageVector = Icons.Rounded.SwapHoriz,
-                                contentDescription = "Switch Default Launcher",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-
-                    // Gallery Wallpaper Picker
-                    LiquidGlassSurface(
-                        config = config,
-                        cornerRadius = 50.dp,
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        IconButton(onClick = onPickWallpaper) {
-                            Icon(
-                                imageVector = Icons.Rounded.Wallpaper,
-                                contentDescription = "Wallpaper",
-                                tint = Color.White,
-                                modifier = Modifier.size(19.dp)
-                            )
-                        }
-                    }
-
-                    // Theme Engine
-                    LiquidGlassSurface(
-                        config = config,
-                        cornerRadius = 50.dp,
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        IconButton(onClick = { viewModel.isThemeEngineOpen = true }) {
-                            Icon(
-                                imageVector = Icons.Rounded.Tune,
-                                contentDescription = "Theme Engine",
-                                tint = accent,
-                                modifier = Modifier.size(19.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = "Search",
+                            tint = accent,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Search apps...",
+                            color = Color.White.copy(alpha = 0.78f),
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
 
-                // 03. Clock & Liquid Battery Capsule Widgets
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // 1-Tap Switch Between Samsung One UI Home & Liquid Launcher
+                LiquidGlassSurface(
+                    config = config,
+                    cornerRadius = 50.dp,
+                    modifier = Modifier.size(46.dp)
                 ) {
-                    LiquidGlassSurface(
-                        config = config,
-                        modifier = Modifier
-                            .weight(1.45f)
-                            .height(114.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = currentDate,
-                                    color = accent,
-                                    fontFamily = FontFamily.SansSerif,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Icon(
-                                    imageVector = Icons.Rounded.WaterDrop,
-                                    contentDescription = null,
-                                    tint = accent,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Text(
-                                text = currentTime,
-                                color = Color.White,
-                                fontFamily = FontFamily.SansSerif,
-                                fontSize = 40.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    IconButton(onClick = { viewModel.openDefaultLauncherPicker(context) }) {
+                        Icon(
+                            imageVector = Icons.Rounded.SwapHoriz,
+                            contentDescription = "Switch Default Launcher",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
+                }
 
-                    LiquidGlassSurface(
-                        config = config,
-                        modifier = Modifier
-                            .weight(0.85f)
-                            .height(114.dp)
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(batteryLevel / 100f)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                accent.copy(alpha = 0.52f),
-                                                accent.copy(alpha = 0.16f)
-                                            )
-                                        )
-                                    )
-                            )
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(12.dp),
-                                verticalArrangement = Arrangement.SpaceBetween,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Bolt,
-                                    contentDescription = "Battery",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = "$batteryLevel%",
-                                    color = Color.White,
-                                    fontFamily = FontFamily.SansSerif,
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "FLUID CELL",
-                                    color = Color.White.copy(alpha = 0.72f),
-                                    fontFamily = FontFamily.SansSerif,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
+                // Gallery Wallpaper Import
+                LiquidGlassSurface(
+                    config = config,
+                    cornerRadius = 50.dp,
+                    modifier = Modifier.size(46.dp)
+                ) {
+                    IconButton(onClick = onPickWallpaper) {
+                        Icon(
+                            imageVector = Icons.Rounded.Wallpaper,
+                            contentDescription = "Import Wallpaper",
+                            tint = Color.White,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+                }
+
+                // Liquid Theme Engine
+                LiquidGlassSurface(
+                    config = config,
+                    cornerRadius = 50.dp,
+                    modifier = Modifier.size(46.dp)
+                ) {
+                    IconButton(onClick = { viewModel.isThemeEngineOpen = true }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Tune,
+                            contentDescription = "Theme Engine",
+                            tint = accent,
+                            modifier = Modifier.size(19.dp)
+                        )
                     }
                 }
             }
 
-            // Home Grid: Liquid Folders + App-Specific Liquid Icons
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // One UI Multi-Page Horizontal Home Workspace
+            HorizontalPager(
+                state = pagerState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(vertical = 16.dp)
-            ) {
-                if (socialApps.isNotEmpty()) {
-                    item(key = "folder_social") {
-                        LiquidFolderItem(
-                            title = "Social",
-                            apps = socialApps,
-                            config = config,
-                            onClick = {
-                                openedFolderTitle = "Social"
-                                openedFolderApps = socialApps
+                    .padding(vertical = 12.dp)
+            ) { pageIndex ->
+                val pageApps = pages.getOrElse(pageIndex) { emptyList() }
+
+                if (pageIndex == 0) {
+                    // Page 1: Liquid Clock & Battery Widgets + Folders + Apps
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            LiquidGlassSurface(
+                                config = config,
+                                modifier = Modifier
+                                    .weight(1.45f)
+                                    .height(114.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = currentDate,
+                                            color = accent,
+                                            fontFamily = FontFamily.SansSerif,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Rounded.WaterDrop,
+                                            contentDescription = null,
+                                            tint = accent,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = currentTime,
+                                        color = Color.White,
+                                        fontFamily = FontFamily.SansSerif,
+                                        fontSize = 40.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
-                        )
-                    }
-                }
-                if (googleApps.isNotEmpty()) {
-                    item(key = "folder_google") {
-                        LiquidFolderItem(
-                            title = "Google",
-                            apps = googleApps,
-                            config = config,
-                            onClick = {
-                                openedFolderTitle = "Google"
-                                openedFolderApps = googleApps
+
+                            LiquidGlassSurface(
+                                config = config,
+                                modifier = Modifier
+                                    .weight(0.85f)
+                                    .height(114.dp)
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .fillMaxWidth()
+                                            .fillMaxHeight(batteryLevel / 100f)
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    colors = listOf(
+                                                        accent.copy(alpha = 0.52f),
+                                                        accent.copy(alpha = 0.16f)
+                                                    )
+                                                )
+                                            )
+                                    )
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(12.dp),
+                                        verticalArrangement = Arrangement.SpaceBetween,
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Bolt,
+                                            contentDescription = "Battery",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = "$batteryLevel%",
+                                            color = Color.White,
+                                            fontFamily = FontFamily.SansSerif,
+                                            fontSize = 22.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "FLUID CELL",
+                                            color = Color.White.copy(alpha = 0.72f),
+                                            fontFamily = FontFamily.SansSerif,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
                             }
-                        )
+                        }
+
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            userScrollEnabled = false,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            if (socialApps.isNotEmpty()) {
+                                item(key = "folder_social") {
+                                    LiquidFolderItem(
+                                        title = "Social",
+                                        apps = socialApps,
+                                        config = config,
+                                        onClick = {
+                                            openedFolderTitle = "Social"
+                                            openedFolderApps = socialApps
+                                        }
+                                    )
+                                }
+                            }
+                            if (googleApps.isNotEmpty()) {
+                                item(key = "folder_google") {
+                                    LiquidFolderItem(
+                                        title = "Google",
+                                        apps = googleApps,
+                                        config = config,
+                                        onClick = {
+                                            openedFolderTitle = "Google"
+                                            openedFolderApps = googleApps
+                                        }
+                                    )
+                                }
+                            }
+                            items(pageApps, key = { it.packageName }) { app ->
+                                LiquidAppIconItem(
+                                    app = app,
+                                    config = config,
+                                    onClick = { viewModel.launchApp(context, app.packageName) }
+                                )
+                            }
+                        }
                     }
-                }
-                items(viewModel.homeApps.take(10), key = { it.packageName }) { app ->
-                    LiquidAppIconItem(
-                        app = app,
-                        config = config,
-                        onClick = { viewModel.launchApp(context, app.packageName) }
-                    )
+                } else {
+                    // Page 2+: Full 4x4 One UI App Grid
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        userScrollEnabled = false,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(pageApps, key = { it.packageName }) { app ->
+                            LiquidAppIconItem(
+                                app = app,
+                                config = config,
+                                onClick = { viewModel.launchApp(context, app.packageName) }
+                            )
+                        }
+                    }
                 }
             }
 
-            // Viscous Liquid Floating Dock
+            // Bottom Section: One UI Page Indicator Dots + Viscous Liquid Dock
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .padding(bottom = 8.dp)
-                        .size(38.dp, 4.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.45f))
-                        .clickable { viewModel.isDrawerOpen = true }
-                )
+                Row(
+                    modifier = Modifier.padding(bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(pages.size) { index ->
+                        val isSelected = pagerState.currentPage == index
+                        val dotWidth by animateDpAsState(
+                            targetValue = if (isSelected) 18.dp else 6.dp,
+                            label = "pageDotWidth"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .height(6.dp)
+                                .width(dotWidth)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) accent else Color.White.copy(alpha = 0.35f)
+                                )
+                                .clickable {
+                                    scope.launch { pagerState.animateScrollToPage(index) }
+                                }
+                        )
+                    }
+                }
 
                 LiquidGlassSurface(
                     config = config,
@@ -436,7 +482,7 @@ fun HomeScreen(
             }
         }
 
-        // Liquid Folder Pop-Up Modal
+        // One UI Style Pop-up Liquid Folder Modal
         AnimatedVisibility(
             visible = openedFolderTitle != null,
             enter = fadeIn() + scaleIn(initialScale = 0.85f),
